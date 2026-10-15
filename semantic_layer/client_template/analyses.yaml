@@ -1,0 +1,22 @@
+# STEP 5 - recurring "why did X move" questions, as config (no code).
+#   delta              inputs {value}
+#   contribution       inputs {value} + dimension
+#   price_volume       inputs {value, volume}
+#   price_volume_mix   inputs {value, volume} + dimension   params: excluded_categories, rate_is_ratio
+#   ratio_bridge       inputs {numerator, denominator}
+#   rollforward_bridge inputs {level (snapshot), flows}     params: flow_dimension (required)
+# Budget comparison: comparison side uses inputs.budget_<role>, else the metric's budget_metric_id.
+# params.labels renames drivers into the client's words.
+# params.adjustments: [{label, metric_id, sign}] adds post-netting lines (e.g. timing).
+- analysis_id: revenue_vs_budget
+  title: Net revenue vs budget by region
+  question_examples:
+    - How did revenue do against budget?
+    - Which region missed plan?
+  headline_metric: net_revenue
+  method: contribution
+  inputs: {value: net_revenue}
+  dimension: region
+  default_comparison: budget
+  status: live
+  owner: FP&A

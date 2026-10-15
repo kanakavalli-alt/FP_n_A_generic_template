@@ -1,0 +1,39 @@
+# Business glossary — definitions the agent can quote (no numbers come from here).
+- term: Census date
+  aliases: [census day]
+  definition: The date (day 14 of a term) after which a start is counted and tuition is earned.
+  category: Enrollment
+  owner: Registrar
+  related_metrics: [new_starts, active_students]
+
+- term: Re-entry
+  aliases: [re-admit, re-enrollment, restart]
+  definition: A former student who restarts a program without a new marketing lead. Counted in new starts but not in leads.
+  category: Enrollment
+  owner: Enrollment Management
+  related_metrics: [new_starts]
+
+- term: Reportable lead
+  aliases: [qualified lead]
+  definition: A lead that passed de-duplication and is flagged is_reportable = 1.
+  category: Marketing
+  owner: Marketing Ops
+  related_metrics: [leads]
+
+- term: Fiscal year
+  aliases: [FY]
+  definition: Northwind's fiscal year runs July to June and is named by the calendar year in which it ends (FY2026 = July 2025 to June 2026).
+  category: Finance
+  owner: FP&A
+
+- term: Favorable variance
+  aliases: [favourable, unfavorable variance]
+  definition: A variance is favorable when it moves in the metric's favorable direction (e.g. higher revenue, lower drop rate).
+  category: Finance
+  owner: FP&A
+
+- term: Modality
+  aliases: [delivery format]
+  definition: How a course is delivered - Online, Campus or Hybrid.
+  category: Academic
+  owner: Academic Operations

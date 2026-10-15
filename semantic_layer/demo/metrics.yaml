@@ -1,0 +1,250 @@
+# The metric catalogue — every number the agent can state comes from a row here.
+#
+# Base metrics compile to SQL (fpa_agent/query/compiler.py):
+#   SELECT <measure> FROM <table> WHERE <time predicate> AND <filters> [GROUP BY dims]
+# Derived metrics are Decimal formulas over other metrics (fpa_agent/engine/formulas.py).
+# reference_sql is the client's OWN query, used only by the reconciliation module.
+
+# ── Enrollment funnel (SIS) ──────────────────────────────────────────────────
+- metric_id: leads
+  term: Reportable leads
+  aliases: [leads, inquiries, reportable leads, lead volume]
+  definition: Count of marketing leads flagged reportable (is_reportable = 1).
+  business_context: Top of the enrollment funnel; duplicates and test leads are non-reportable.
+  unit: count
+  favorable_direction: higher
+  source_id: sis
+  table: enrollment_funnel
+  measure: SUM(leads)
+  filters: [{column: is_reportable, operator: "=", values: [1]}]
+  time: {pattern: year_month, year_column: yr, month_column: mnth}
+  dimensions: {channel: channel, program: program}
+  owner: Marketing Ops
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT SUM(leads) AS value FROM enrollment_funnel
+    WHERE is_reportable = 1 AND yr * 100 + mnth >= :start_yyyymm AND yr * 100 + mnth <= :end_yyyymm
+
+- metric_id: new_starts
+  term: New starts
+  aliases: [starts, new starts, enrollments started, start count]
+  definition: Students who started a program and passed census, including re-entries.
+  business_context: The primary growth KPI reviewed monthly by FP&A.
+  unit: count
+  favorable_direction: higher
+  source_id: sis
+  table: enrollment_funnel
+  measure: SUM(starts)
+  filters: [{column: is_reportable, operator: "=", values: [1]}]
+  time: {pattern: year_month, year_column: yr, month_column: mnth}
+  dimensions: {channel: channel, program: program}
+  owner: Enrollment Management
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT SUM(starts) AS value FROM enrollment_funnel
+    WHERE is_reportable = 1 AND yr * 100 + mnth BETWEEN :start_yyyymm AND :end_yyyymm
+
+- metric_id: conversion_rate
+  term: Lead-to-start conversion rate
+  aliases: [conversion, conversion rate, lead conversion, start rate]
+  definition: New starts divided by reportable leads for the same period and scope.
+  unit: ratio
+  decimals: 4
+  favorable_direction: higher
+  additive: false
+  metric_type: derived
+  formula: "{new_starts} / {leads}"
+  owner: Enrollment Management
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT CAST(SUM(starts) AS REAL) / SUM(leads) AS value FROM enrollment_funnel
+    WHERE is_reportable = 1 AND yr * 100 + mnth BETWEEN :start_yyyymm AND :end_yyyymm
+
+# ── Census (SIS) ─────────────────────────────────────────────────────────────
+- metric_id: active_students
+  term: Census
+  aliases: [census, active students, headcount, student count, enrolled students]
+  definition: Active students at month end. For a multi-month period, the level at the last month end.
+  unit: count
+  favorable_direction: higher
+  time_semantics: snapshot
+  source_id: sis
+  table: student_census
+  measure: SUM(active_students)
+  time: {pattern: period_key, column: snapshot_month, key_format: YYYY-MM}
+  dimensions: {program: program}
+  owner: Registrar
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT SUM(active_students) AS value FROM student_census WHERE snapshot_month = :end_ym
+
+- metric_id: status_flows
+  term: Census movements
+  aliases: [status movements, flows, census flows, drops and graduations]
+  definition: Signed student status events (starts and returns add; drops and graduations subtract).
+  unit: count
+  favorable_direction: higher
+  source_id: sis
+  table: status_events
+  measure: SUM(signed_count)
+  time: {pattern: date, column: event_date}
+  dimensions: {program: program, event_type: event_type}
+  owner: Registrar
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT SUM(signed_count) AS value FROM status_events
+    WHERE event_date >= :start_date AND event_date < :end_date
+
+# ── Revenue & budget (ERP) ───────────────────────────────────────────────────
+- metric_id: net_revenue
+  term: Net revenue
+  aliases: [revenue, net sales, sales, recognised revenue, recognized revenue]
+  definition: Recognised net revenue from ERP revenue transactions.
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  source_id: erp
+  table: revenue_txn
+  measure: SUM(net_amount)
+  time: {pattern: date, column: txn_date}
+  dimensions: {program: program, modality: modality}
+  budget_metric_id: budget_net_revenue
+  owner: Revenue Accounting
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT ROUND(SUM(net_amount), 2) AS value FROM revenue_txn
+    WHERE txn_date >= :start_date AND txn_date < :end_date
+
+- metric_id: units_sold
+  term: Paid units
+  aliases: [units, paid units, credits sold, course units]
+  definition: Paid course units from ERP revenue transactions.
+  unit: count
+  favorable_direction: higher
+  source_id: erp
+  table: revenue_txn
+  measure: SUM(units)
+  time: {pattern: date, column: txn_date}
+  dimensions: {program: program, modality: modality}
+  budget_metric_id: budget_units
+  owner: Revenue Accounting
+  definition_status: confirmed
+
+- metric_id: average_unit_price
+  term: Average revenue per unit
+  aliases: [asp, average selling price, price per unit, revenue per unit]
+  definition: Net revenue divided by paid units.
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  additive: false
+  metric_type: derived
+  formula: "{net_revenue} / {units_sold}"
+  owner: Revenue Accounting
+  definition_status: confirmed
+
+- metric_id: budget_net_revenue
+  term: Budgeted net revenue
+  aliases: [budget, revenue budget, plan revenue, budgeted revenue]
+  definition: Board-approved monthly net revenue budget by modality.
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  source_id: erp
+  table: budget
+  measure: SUM(budget_net_sales)
+  time: {pattern: period_key, column: period_key, key_format: YYYYMM}
+  dimensions: {modality: modality}
+  owner: FP&A
+  definition_status: confirmed
+  reference_sql: >-
+    SELECT SUM(budget_net_sales) AS value FROM budget WHERE period_key BETWEEN :start_yyyymm AND :end_yyyymm
+
+- metric_id: budget_units
+  term: Budgeted paid units
+  aliases: [unit budget, budgeted units]
+  definition: Monthly paid-unit budget by modality.
+  unit: count
+  favorable_direction: higher
+  source_id: erp
+  table: budget
+  measure: SUM(budget_units)
+  time: {pattern: period_key, column: period_key, key_format: YYYYMM}
+  dimensions: {modality: modality}
+  owner: FP&A
+  definition_status: confirmed
+
+# ── Fiscal-year economics (SIS summary, reported per whole fiscal year) ──────
+- metric_id: fy_tuition_revenue
+  term: Fiscal-year tuition revenue
+  aliases: [tuition revenue, annual tuition revenue]
+  definition: Tuition revenue for the fiscal year from the SIS fiscal-year summary.
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  source_id: sis
+  table: fy_enrollment_summary
+  measure: SUM(tuition_revenue)
+  time: {pattern: fiscal_year, column: fiscal_year}
+  dimensions: {program: program}
+  owner: FP&A
+  definition_status: confirmed
+
+- metric_id: fy_enrolled_students
+  term: Fiscal-year enrolled students
+  aliases: [annual enrolled students, unique students]
+  definition: Distinct students enrolled at any point in the fiscal year.
+  unit: count
+  favorable_direction: higher
+  additive: false
+  source_id: sis
+  table: fy_enrollment_summary
+  measure: SUM(enrolled_students)
+  time: {pattern: fiscal_year, column: fiscal_year}
+  dimensions: {program: program}
+  owner: Registrar
+  definition_status: confirmed
+
+- metric_id: revenue_per_student
+  term: Revenue per student
+  aliases: [rps, revenue per student, tuition per student]
+  definition: Fiscal-year tuition revenue divided by fiscal-year enrolled students.
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  additive: false
+  metric_type: derived
+  formula: "{fy_tuition_revenue} / {fy_enrolled_students}"
+  owner: FP&A
+  definition_status: partial
+  open_questions: Finance is still confirming whether audit-only students belong in the denominator.
+  reference_sql: >-
+    SELECT SUM(tuition_revenue) / SUM(enrolled_students) AS value
+    FROM fy_enrollment_summary WHERE fiscal_year = :fiscal_year
+
+# ── Governance-gate examples ─────────────────────────────────────────────────
+- metric_id: marketing_spend
+  term: Marketing spend
+  aliases: [marketing cost, ad spend, cost per lead]
+  definition: Paid media and agency spend.
+  unit: currency
+  definition_status: blocked
+  open_questions: Spend is tracked in a spreadsheet that is not connected yet.
+  owner: Marketing Finance
+
+- metric_id: retention_rate
+  term: Term-to-term retention
+  aliases: [retention, persistence]
+  definition: Share of students active in one term who are active in the next.
+  unit: ratio
+  definition_status: incomplete
+  open_questions: Term calendar mapping is pending confirmation from the Registrar.
+  owner: Registrar
+
+- metric_id: student_satisfaction
+  term: Student satisfaction
+  aliases: [nps, satisfaction]
+  definition: Survey-based satisfaction; a qualitative driver of retention.
+  category: causal
+  definition_status: confirmed
+  owner: Student Services

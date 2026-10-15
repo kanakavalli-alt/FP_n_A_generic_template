@@ -1,0 +1,19 @@
+[project]
+name = "fpa-agent-template"
+version = "1.0.0"
+description = "Generic, semantic-layer-driven FP&A analyst agent with grounding, lineage and source reconciliation"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[project.scripts]
+fpa = "fpa_agent.cli:main"
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+include = ["fpa_agent*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,19 @@
+# Gate every catalog or code change: lint the semantic layer, run the unit and
+# integration suite, then reconcile the agent against the (demo or staging) sources.
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements-dev.txt
+      - run: python demo/build_demo_db.py
+      - run: python -m fpa_agent validate --live
+      - run: python -m pytest
+      - run: python -m fpa_agent reconcile --auto-months 3 --as-of 2026-10-15 --out out/reconciliation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: reconciliation, path: out/reconciliation }

@@ -1,0 +1,164 @@
+# Source-match tests. Each runs the agent's deterministic path AND an
+# independent reference (the client's own SQL, or a figure from their report)
+# and fails if they differ beyond tolerance.
+#
+# reference_sql named parameters (filled from the resolved period):
+#   :start_date :end_date (exclusive) :last_date :start_yyyymm :end_yyyymm
+#   :start_ym :end_ym ('YYYY-MM') :fiscal_year (whole fiscal years only)
+#   and the same with a cmp_ prefix for the comparison period (analyses).
+# Grouped tests: reference_sql returns the dimension columns + `value`.
+# Analyses: reference_sql returns the headline CHANGE as `value`.
+
+- test_id: leads_fy2026_q1
+  description: Reportable leads, fiscal Q1 FY2026 (Jul-Sep 2025)
+  kind: metric
+  metric_id: leads
+  period: {type: quarter, fiscal: true, year: 2026, quarter: 1}
+  tags: [funnel, smoke]
+
+- test_id: starts_sep2026_by_channel
+  description: New starts by channel, September 2026
+  kind: metric
+  metric_id: new_starts
+  period: {type: month, year: 2026, month: 9}
+  group_by: [channel]
+  reference_sql: >-
+    SELECT channel, SUM(starts) AS value FROM enrollment_funnel
+    WHERE is_reportable = 1 AND yr = 2026 AND mnth = 9 GROUP BY channel
+  tags: [funnel]
+
+- test_id: conversion_fy2026
+  description: Lead-to-start conversion, full FY2026
+  kind: metric
+  metric_id: conversion_rate
+  period: {type: year, fiscal: true, year: 2026}
+  tolerance_abs: 0.0001
+  tags: [funnel, derived]
+
+- test_id: census_sep2026
+  description: Month-end census, September 2026 (snapshot)
+  kind: metric
+  metric_id: active_students
+  period: {type: month, year: 2026, month: 9}
+  tags: [census, smoke]
+
+- test_id: census_q4_fy2026_by_program
+  description: Census at the end of fiscal Q4 FY2026 by program (snapshot takes the last month)
+  kind: metric
+  metric_id: active_students
+  period: {type: quarter, fiscal: true, year: 2026, quarter: 4}
+  group_by: [program]
+  reference_sql: >-
+    SELECT program, SUM(active_students) AS value FROM student_census
+    WHERE snapshot_month = '2026-06' GROUP BY program
+  tags: [census]
+
+- test_id: flows_fy2026_q4
+  description: Net status movements, fiscal Q4 FY2026
+  kind: metric
+  metric_id: status_flows
+  period: {type: quarter, fiscal: true, year: 2026, quarter: 4}
+  tags: [census]
+
+- test_id: revenue_fy2026
+  description: Net revenue, FY2026
+  kind: metric
+  metric_id: net_revenue
+  period: {type: year, fiscal: true, year: 2026}
+  tolerance_abs: 0.01
+  tags: [revenue, smoke]
+
+- test_id: budget_aug2026
+  description: Budgeted net revenue, August 2026
+  kind: metric
+  metric_id: budget_net_revenue
+  period: {type: month, year: 2026, month: 8}
+  tolerance_abs: 0.01
+  tags: [revenue]
+
+- test_id: rps_fy2026
+  description: Revenue per student, FY2026
+  kind: metric
+  metric_id: revenue_per_student
+  period: {type: year, fiscal: true, year: 2026}
+  tolerance_abs: 0.01
+  tags: [revenue, derived]
+
+- test_id: starts_bridge_fy2026_q3
+  description: New-starts variance FY2026 Q3 vs prior year - headline change
+  kind: analysis
+  analysis_id: new_starts_drivers
+  period: {type: quarter, fiscal: true, year: 2026, quarter: 3}
+  comparison: prior_year
+  reference_sql: >-
+    SELECT
+      (SELECT SUM(starts) FROM enrollment_funnel WHERE is_reportable = 1
+         AND yr * 100 + mnth BETWEEN :start_yyyymm AND :end_yyyymm)
+    - (SELECT SUM(starts) FROM enrollment_funnel WHERE is_reportable = 1
+         AND yr * 100 + mnth BETWEEN :cmp_start_yyyymm AND :cmp_end_yyyymm) AS value
+  tags: [funnel, analysis, smoke]
+
+- test_id: census_bridge_sep2026
+  description: Census bridge Sep 2026 vs Sep 2025 - headline change
+  kind: analysis
+  analysis_id: census_bridge
+  period: {type: month, year: 2026, month: 9}
+  comparison: prior_year
+  reference_sql: >-
+    SELECT (SELECT SUM(active_students) FROM student_census WHERE snapshot_month = :end_ym)
+         - (SELECT SUM(active_students) FROM student_census WHERE snapshot_month = :cmp_end_ym) AS value
+  tags: [census, analysis]
+
+- test_id: revenue_vs_budget_aug2026
+  description: Revenue vs budget, August 2026 - variance to budget
+  kind: analysis
+  analysis_id: revenue_vs_budget
+  period: {type: month, year: 2026, month: 8}
+  comparison: budget
+  tolerance_abs: 0.01
+  reference_sql: >-
+    SELECT (SELECT SUM(net_amount) FROM revenue_txn WHERE txn_date >= :start_date AND txn_date < :end_date)
+         - (SELECT SUM(budget_net_sales) FROM budget WHERE period_key BETWEEN :start_yyyymm AND :end_yyyymm) AS value
+  tags: [revenue, analysis]
+
+- test_id: rps_bridge_fy2026
+  description: Revenue-per-student bridge FY2026 vs FY2025 - change
+  kind: analysis
+  analysis_id: revenue_per_student_bridge
+  period: {type: year, fiscal: true, year: 2026}
+  comparison: prior_year
+  tolerance_abs: 0.01
+  reference_sql: >-
+    SELECT (SELECT SUM(tuition_revenue) / SUM(enrolled_students) FROM fy_enrollment_summary WHERE fiscal_year = :fiscal_year)
+         - (SELECT SUM(tuition_revenue) / SUM(enrolled_students) FROM fy_enrollment_summary WHERE fiscal_year = :cmp_fiscal_year) AS value
+  tags: [revenue, analysis]
+
+# End-to-end questions: run the real agent (needs model credentials) and check
+# that the reference figure appears in the final answer, that the expected
+# tool was used, and that the grounding guard did not have to block anything.
+- test_id: q_starts_q3
+  kind: question
+  question: How did new starts do in fiscal Q3 2026 versus last year, and what drove it?
+  analysis_id: new_starts_drivers
+  period: {type: quarter, fiscal: true, year: 2026, quarter: 3}
+  comparison: prior_year
+  expected_tool: run_analysis
+  tags: [e2e]
+
+- test_id: q_revenue_budget
+  kind: question
+  question: How did net revenue compare to budget in August 2026?
+  analysis_id: revenue_vs_budget
+  period: {type: month, year: 2026, month: 8}
+  comparison: budget
+  tolerance_abs: 0.01
+  expected_tool: run_analysis
+  tags: [e2e]
+
+- test_id: q_census
+  kind: question
+  question: What was census at the end of September 2026?
+  metric_id: active_students
+  period: {type: month, year: 2026, month: 9}
+  expected_tool: get_metric
+  tags: [e2e]

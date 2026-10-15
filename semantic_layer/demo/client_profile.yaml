@@ -1,0 +1,23 @@
+# One row. Everything the agents need to know about WHO they work for.
+client_id: northwind_learning
+name: Northwind Learning
+industry: Higher education (online and campus degree programs)
+description: >-
+  Northwind Learning is a fictional demo client: a higher-education provider
+  enrolling adult learners into Nursing, Business, IT and Education programs
+  across online, campus and hybrid modalities. Finance runs a July-June fiscal
+  year. FP&A reviews starts, census, revenue and budget variance monthly.
+currency: USD
+locale: en-US
+calendar:
+  fiscal_year_start_month: 7        # FY runs July-June
+  fiscal_year_label: end            # FY2026 = Jul 2025 - Jun 2026
+  close_lag_days: 5                 # a month is reportable 5 days after it ends
+  default_comparison: prior_year
+  ytd_basis: fiscal
+terminology_notes: >-
+  "Starts" always means new starts that passed the census date. "Census" is the
+  count of active students at month end. "Re-entry" students restart without a
+  new lead. Revenue is recognised net revenue in the ERP, never bookings.
+data_freshness_note: Source systems are queried live; a month is final 5 days after it ends.
+support_contact: fpa-team@northwind.example

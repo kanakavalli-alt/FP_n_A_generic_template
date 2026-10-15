@@ -1,0 +1,16 @@
+# Source systems. Connection secrets NEVER live here — only the env var names.
+# Production: {"mode": "mcp", "url_env": "SIS_MCP_URL"} (generic MCP server
+# deployed next to the database). Local dev / tests: direct DB-API.
+- source_id: sis
+  display_name: Student Information System
+  dialect: sqlite
+  description: Enrollment funnel, student status events, monthly census, fiscal-year enrollment summary.
+  connection: {mode: local, driver: sqlite, path_env: DEMO_SIS_DB, path: demo/data/sis.sqlite}
+  allowed_tables: [enrollment_funnel, status_events, student_census, fy_enrollment_summary]
+
+- source_id: erp
+  display_name: Finance ERP
+  dialect: sqlite
+  description: Recognised revenue transactions and the monthly budget by modality.
+  connection: {mode: local, driver: sqlite, path_env: DEMO_ERP_DB, path: demo/data/erp.sqlite}
+  allowed_tables: [revenue_txn, budget]

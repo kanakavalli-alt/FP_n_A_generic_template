@@ -1,0 +1,65 @@
+# STEP 4 - the metric catalogue. Every figure the agent states comes from a row here.
+# Status gate: confirmed (answer) | partial (answer + caveat) | incomplete / blocked (decline, name owner)
+#
+# Time patterns:
+#   date         {pattern: date, column: txn_date}
+#   year_month   {pattern: year_month, year_column: yr, month_column: mnth}
+#   period_key   {pattern: period_key, column: period_ref, key_format: YYYYMM | YYYY_MM | YYYY-MM}
+#   fiscal_year  {pattern: fiscal_year, column: fiscal_year}     (whole fiscal years only)
+#   none         {pattern: none}
+# time_semantics: flow (sum over the period) | snapshot (level at the period's last month)
+
+- metric_id: net_revenue
+  term: Net revenue
+  aliases: [revenue, net sales]
+  definition: "<exact business definition, as finance signs it off>"
+  unit: currency
+  decimals: 2
+  favorable_direction: higher
+  source_id: erp
+  table: dbo.fact_revenue
+  table_alias: f
+  joins:                              # optional. Quote "on": YAML reads a bare on: as true
+    - {table: dbo.dim_date, alias: d, "on": [[f.date_key, d.date_key]]}
+  measure: SUM(f.net_amount)
+  filters:
+    - {column: f.is_reportable, operator: "=", values: [1]}
+    - {column: f.account_group, operator: IN, values: [Revenue, Adjustments]}
+  time: {pattern: year_month, year_column: d.cal_year, month_column: d.cal_month}
+  dimensions: {region: f.region}
+  budget_metric_id: budget_net_revenue
+  owner: Revenue Accounting
+  definition_status: confirmed
+  # The client's OWN query for this number (from their report / BI tool).
+  # Used ONLY by `fpa reconcile` to prove the agent matches the source.
+  reference_sql: >-
+    SELECT SUM(net_amount) AS value FROM dbo.fact_revenue
+    WHERE is_reportable = 1 AND account_group IN ('Revenue', 'Adjustments')
+    AND txn_date >= :start_date AND txn_date < :end_date
+
+- metric_id: budget_net_revenue
+  term: Budgeted net revenue
+  aliases: [budget, plan]
+  definition: "<board-approved budget>"
+  unit: currency
+  decimals: 2
+  source_id: erp
+  table: dbo.budget
+  measure: SUM(budget_amount)
+  time: {pattern: period_key, column: period_key, key_format: YYYYMM}
+  dimensions: {region: region}
+  owner: FP&A
+  definition_status: confirmed
+
+- metric_id: gross_margin_pct
+  term: Gross margin %
+  aliases: [margin, gm%]
+  definition: (Net revenue - COGS) / Net revenue
+  unit: percent
+  decimals: 2
+  additive: false
+  metric_type: derived
+  formula: "({net_revenue} - {cogs}) / {net_revenue} * 100"
+  owner: FP&A
+  definition_status: incomplete       # add a `cogs` row, then confirm
+  open_questions: COGS mapping pending from Cost Accounting.

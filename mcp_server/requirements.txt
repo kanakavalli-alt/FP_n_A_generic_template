@@ -1,0 +1,13 @@
+mcp>=1.27,<2
+uvicorn>=0.30
+pydantic>=2.7
+google-auth>=2.30
+google-cloud-secret-manager>=2.20
+requests>=2.31
+# install the driver for THIS server's database only:
+# pyodbc            # SQL Server (also needs "ODBC Driver 18 for SQL Server")
+# redshift_connector
+# psycopg2-binary   # Postgres
+# oracledb
+# snowflake-connector-python
+# pymysql

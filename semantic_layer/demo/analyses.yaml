@@ -1,0 +1,105 @@
+# Analyses = the recurring FP&A questions, as CONFIG. Each binds a generic
+# method (fpa_agent/engine/methods.py) to metrics by role. No code per analysis.
+#
+# Methods: delta | contribution | price_volume | price_volume_mix |
+#          ratio_bridge | rollforward_bridge
+# Budget comparison: the comparison side uses inputs.budget_<role>, or the
+# metric's budget_metric_id.
+
+- analysis_id: new_starts_drivers
+  title: New starts variance — lead volume, channel mix and conversion
+  description: >-
+    Explains the change in new starts as lead volume, channel mix, conversion
+    rate, interaction effects, and re-entry starts that have no lead.
+  question_examples:
+    - Why are starts down versus last year?
+    - What drove new starts in Q1?
+    - Starts are up 5% YoY - is that volume or conversion?
+  headline_metric: new_starts
+  method: price_volume_mix
+  inputs: {value: new_starts, volume: leads}
+  dimension: channel
+  default_comparison: prior_year
+  params:
+    rate_is_ratio: true
+    labels:
+      volume: Lead volume
+      mix: Channel mix
+      rate: Conversion rate
+      mix_interaction: Mix x rate interaction
+      volume_interaction: Volume x rate interaction
+      unattributed: Re-entries (no lead)
+  status: live
+  owner: Enrollment Management
+
+- analysis_id: census_bridge
+  title: Census bridge — opening census, starts, drops, graduations, returns
+  description: Explains the change in month-end census as opening census plus signed status flows.
+  question_examples:
+    - What is driving census year over year?
+    - Why is census up 4% versus last year?
+  headline_metric: active_students
+  method: rollforward_bridge
+  inputs: {level: active_students, flows: status_flows}
+  default_comparison: prior_year
+  params:
+    flow_dimension: event_type
+    labels:
+      carry_in: Opening census
+      START: New starts
+      DROP: Drops
+      GRAD: Graduations
+      RETURN: Returns
+      other_flows: Other movements (corrections)
+  status: live
+  owner: Registrar
+
+- analysis_id: revenue_per_student_bridge
+  title: Revenue per student — revenue effect vs enrollment effect
+  description: Splits the fiscal-year change in revenue per student into the revenue effect and the enrollment (denominator) effect.
+  question_examples:
+    - Why did revenue per student change this fiscal year?
+  headline_metric: revenue_per_student
+  method: ratio_bridge
+  inputs: {numerator: fy_tuition_revenue, denominator: fy_enrolled_students}
+  default_comparison: prior_year
+  params:
+    labels: {numerator_effect: Tuition revenue effect, denominator_effect: Enrollment effect}
+  status: live
+  owner: FP&A
+
+- analysis_id: revenue_vs_budget
+  title: Net revenue vs budget by modality
+  description: Actual net revenue against budget, with the variance attributed to each modality.
+  question_examples:
+    - How did revenue do against budget last month?
+    - Which modality missed budget?
+  headline_metric: net_revenue
+  method: contribution
+  inputs: {value: net_revenue}
+  dimension: modality
+  default_comparison: budget
+  status: live
+  owner: FP&A
+
+- analysis_id: revenue_price_volume
+  title: Net revenue — price vs volume
+  description: Splits the change in net revenue into unit volume, average price and interaction.
+  question_examples:
+    - Is revenue growth coming from price or volume?
+  headline_metric: net_revenue
+  method: price_volume
+  inputs: {value: net_revenue, volume: units_sold}
+  default_comparison: prior_year
+  params:
+    labels: {volume: Unit volume, price: Average price, interaction: Price x volume interaction}
+  status: live
+  owner: FP&A
+
+- analysis_id: retention_drivers
+  title: Retention drivers
+  headline_metric: retention_rate
+  method: delta
+  inputs: {value: retention_rate}
+  status: roadmap
+  notes: Waiting on the term calendar mapping.

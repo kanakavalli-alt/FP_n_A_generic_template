@@ -1,0 +1,22 @@
+# STEP 8 - prove the agent matches the source. Collect 10-20 figures the client
+# already trusts (report numbers or their own SQL) BEFORE UAT; `fpa reconcile`
+# must be 100% green before go-live. reference_sql named params:
+#   :start_date :end_date (exclusive) :last_date :start_yyyymm :end_yyyymm
+#   :start_ym :end_ym :fiscal_year, and cmp_* for an analysis' comparison period.
+- test_id: revenue_last_fy
+  description: Net revenue for the last closed fiscal year vs the signed-off P&L
+  kind: metric
+  metric_id: net_revenue
+  period: {type: year, fiscal: true, year: 2026}
+  expected_value: 0                   # <- figure from the signed-off P&L
+  tolerance_abs: 0.01
+  tags: [smoke]
+
+- test_id: q_revenue_budget
+  kind: question
+  question: How did net revenue do against budget last month?
+  analysis_id: revenue_vs_budget
+  period: {type: month, offset: -1}
+  comparison: budget
+  expected_tool: run_analysis
+  tags: [e2e]

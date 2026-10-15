@@ -1,0 +1,7 @@
+# STEP 3 - conformed dimensions (the "by X" in questions). Each metric maps a
+# dimension_id to its own column, so one dimension can span several sources.
+- dimension_id: region
+  display_name: Region
+  description: "<meaning>"
+  aliases: [geo, territory]
+  values_hint: [EMEA, AMER, APAC]

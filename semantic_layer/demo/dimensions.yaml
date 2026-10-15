@@ -1,0 +1,24 @@
+# Conformed dimensions. Each metric maps a dimension id to its own column.
+- dimension_id: channel
+  display_name: Marketing channel
+  description: Acquisition channel a lead (and its start) is attributed to. Re-entry = restart with no new lead.
+  aliases: [marketing channel, lead source, source channel]
+  values_hint: [Paid Search, Organic, Referral, Aggregator, Partner, Re-entry]
+
+- dimension_id: program
+  display_name: Program
+  description: Academic program family.
+  aliases: [programme, school, program family]
+  values_hint: [Nursing, Business, IT, Education]
+
+- dimension_id: modality
+  display_name: Modality
+  description: Delivery format of the course.
+  aliases: [delivery mode, format, delivery]
+  values_hint: [Online, Campus, Hybrid]
+
+- dimension_id: event_type
+  display_name: Status event
+  description: Student status movement that changes census (START adds, DROP and GRAD subtract, RETURN adds).
+  aliases: [status, movement, flow type]
+  values_hint: [START, DROP, GRAD, RETURN]

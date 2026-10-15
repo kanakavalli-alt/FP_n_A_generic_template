@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8
+uvicorn>=0.30
+pandas>=2.2      # catalog excel import
+openpyxl>=3.1

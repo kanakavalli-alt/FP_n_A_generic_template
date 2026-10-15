@@ -1,0 +1,19 @@
+# STEP 1 - who the agents work for. Fed into every agent prompt.
+client_id: acme                       # short, lowercase
+name: ACME Corp
+industry: "<industry / business model>"
+description: >-
+  <Two or three sentences on what the business does, its segments and what
+  FP&A reviews each cycle. The agent uses this to sound like an insider.>
+currency: USD
+locale: en-US
+calendar:
+  fiscal_year_start_month: 1          # 1 = calendar year; 7 = July-June; 4 = April-March
+  fiscal_year_label: end              # FY named by the year it ends (end) or starts (start)
+  close_lag_days: 5                   # days after month end before a month is reportable
+  default_comparison: prior_year      # prior_year | prior_period | budget
+  ytd_basis: fiscal                   # fiscal | calendar
+terminology_notes: >-
+  <How people talk: "bookings" vs "revenue", what "active" means, etc.>
+data_freshness_note: "<e.g. ERP closes on business day 5; CRM is live>"
+support_contact: "<fpa-team@client.com>"

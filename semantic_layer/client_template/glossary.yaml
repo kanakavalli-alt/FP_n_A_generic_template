@@ -1,0 +1,7 @@
+# STEP 6 - business glossary the agent may quote (definitions only, never numbers).
+- term: Bookings
+  aliases: [orders]
+  definition: "<definition>"
+  category: Sales
+  owner: "<owner>"
+  related_metrics: []

@@ -1,0 +1,15 @@
+# STEP 2 - one row per source system. NEVER put secrets here: only env var names.
+# Production: deploy mcp_server/ next to each database and set the URL env var.
+- source_id: erp
+  display_name: "<ERP name, e.g. SQL Server finance warehouse>"
+  dialect: mssql                      # mssql | postgres | redshift | oracle | snowflake | bigquery | mysql
+  description: "<what lives here>"
+  connection: {mode: mcp, url_env: ERP_MCP_URL}
+  allowed_tables: [dbo.fact_revenue, dbo.dim_date, dbo.budget]
+
+- source_id: crm
+  display_name: "<CRM replica, e.g. Redshift>"
+  dialect: redshift
+  description: "<pipeline, opportunities>"
+  connection: {mode: mcp, url_env: CRM_MCP_URL}
+  allowed_tables: [sales.opportunity]
